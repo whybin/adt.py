@@ -36,6 +36,7 @@ def Type(tag, specs):
       return ( construct_type_instance, (tag, nospecs, tuple(v for v in self)) )
 
   _tagged_tuple.__name__ = tag
+  _tagged_tuple.__adt_type__ = 'Type'
   
   @curry_n(len(specs))
   def _bind(*vals):    
@@ -96,6 +97,7 @@ def Record(tag,specs):
           setattr(self,k,v)
 
   _record.__name__ = tag
+  _record.__adt_type__ = 'Record'
 
   def _bind(**vals):
     extras = [ ("'%s'" % k) for k in vals.keys() if not k in specs ]
@@ -126,6 +128,12 @@ def typeof(adt):
   if not hasattr(adt, '__adt_class__'):
     raise TypeError("Not an ADT constructor")
   return adt.__adt_class__
+
+def istype(adt):
+  return adt.__adt_type__ == 'Type'
+
+def isrecord(adt):
+  return adt.__adt_type__ == 'Record'
 
 @curry_n(2)
 def seq_of(t,xs):
@@ -202,5 +210,7 @@ def match(adts, cases, target):
   assert callable(fn), \
     "Matched case is not callable; check your cases"
 
-  return fn() if wildcard else fn( *(slot for slot in target) )
+  return fn() if wildcard \
+    else fn(*target) if istype(target) \
+    else fn(**dict([(k, getattr(target, k)) for k in target.__slots__]))
 
